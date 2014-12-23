@@ -590,14 +590,10 @@ def update(sql, *args):
 
 if __name__ == '__main__':
     # 设置logger级别
-    # logging.basicConfig(level=logging.DEBUG)
-    # create_engine('root', 'root', 'test')
-    # update('drop table if exists user')
-    # update(
-    #     'create table user (id int primary key, name text, email text, passwd text, last_modified real)')
-    # import doctest
-    # doctest.testmod()
-
-    u1 = dict(id=100, name='Alice', email='alice@test.org',
-              passwd='ABC-12345', last_modified=time.time())
-    print u1.iteritems()
+    logging.basicConfig(level=logging.DEBUG)
+    create_engine('root', 'root', 'test')
+    update('drop table if exists user')
+    update(
+        'create table user (id int primary key, name text, email text, passwd text, last_modified real)')
+    import doctest
+    doctest.testmod()
