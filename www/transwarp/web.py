@@ -636,6 +636,7 @@ class StaticFileRoute(object):
         fpath = os.path.join(ctx.application.document_root, args[0])
         if not os.path.isfile(fpath):
             raise notfound()
+        # os.path.splitext 获取文件的路径和文件后缀
         fext = os.path.splitext(fpath)[1]
         ctx.response.content_type = mimetypes.types_map.get(
             fext.lower(), 'application/octet-stream')
@@ -1452,6 +1453,7 @@ def _build_interceptor_chain(last_fn, *interceptors):
     return fn
 
 
+# 用于加载module中的内容
 def _load_module(module_name):
     '''
     Load module from name as str.
@@ -1472,6 +1474,7 @@ def _load_module(module_name):
     from_module = module_name[:last_dot]
     import_module = module_name[last_dot + 1:]
     m = __import__(from_module, globals(), locals(), [import_module])
+    # 获取这个模块属性
     return getattr(m, import_module)
 
 
@@ -1511,8 +1514,11 @@ class WSGIApplication(object):
 
     def add_module(self, mod):
         self._check_not_running()
+        # types.ModuleType 模块类型,types.DictType字典类型等等
+        # 先判断是否是module,如果不是,说明是module中内容,启动加载内容
         m = mod if type(mod) == types.ModuleType else _load_module(mod)
         logging.info('Add module: %s' % m.__name__)
+        # dir获取对象的所有属性和方法名
         for name in dir(m):
             fn = getattr(m, name)
             if callable(fn) and hasattr(fn, '__web_route__') and hasattr(fn, '__web_method__'):
