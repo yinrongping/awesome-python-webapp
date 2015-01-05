@@ -100,6 +100,11 @@ _TIMEDELTA_ZERO = datetime.timedelta(0)
 _RE_TZ = re.compile('^([\+\-])([0-9]{1,2})\:([0-9]{1,2})$')
 
 
+# datetime.tzinfo时区相关类
+# 世界协调时间(Universal Time Coordinated,UTC)
+# GPS 系统中有两种时间区分，一为UTC，另一为LT（地方时）两者的区别为时区不同
+# UTC就是0时区的时间，地方时为本地时间，如北京为早上八点（东八区），
+# UTC时间就为零点，时间比北京时晚八小时，以此计算即可
 class UTC(datetime.tzinfo):
 
     '''
@@ -138,6 +143,7 @@ class UTC(datetime.tzinfo):
             m = int(mt.group(3))
             if minus:
                 h, m = (-h), (-m)
+            # datetime.timedelta :表示时间间隔
             self._utcoffset = datetime.timedelta(hours=h, minutes=m)
             self._tzname = 'UTC%s' % utc
         else:
@@ -157,8 +163,8 @@ class UTC(datetime.tzinfo):
 
     __repr__ = __str__
 
-# all known response statues:
 
+# Response返回状态码字典
 _RESPONSE_STATUSES = {
     # Informational
     100: 'Continue',
@@ -223,6 +229,7 @@ _RESPONSE_STATUSES = {
 
 _RE_RESPONSE_STATUS = re.compile(r'^\d\d\d(\ [\w\ ]+)?$')
 
+# Response Headers消息头
 _RESPONSE_HEADERS = (
     'Accept-Ranges',
     'Age',
@@ -265,12 +272,14 @@ _RESPONSE_HEADERS = (
     'X-UA-Compatible',
 )
 
+# 将消息头和大写做一一对应
 _RESPONSE_HEADER_DICT = dict(
     zip(map(lambda x: x.upper(), _RESPONSE_HEADERS), _RESPONSE_HEADERS))
 
 _HEADER_X_POWERED_BY = ('X-Powered-By', 'transwarp/1.0')
 
 
+# http错误
 class HttpError(Exception):
 
     '''
@@ -281,6 +290,7 @@ class HttpError(Exception):
     '404 Not Found'
     '''
 
+    # 初始化状态
     def __init__(self, code):
         '''
         Init an HttpError with response code.
@@ -288,11 +298,14 @@ class HttpError(Exception):
         super(HttpError, self).__init__()
         self.status = '%d %s' % (code, _RESPONSE_STATUSES[code])
 
+    # 设置消息头
     def header(self, name, value):
         if not hasattr(self, '_headers'):
             self._headers = [_HEADER_X_POWERED_BY]
         self._headers.append((name, value))
 
+    #@property 相当于getter方法
+    #@headers.setter 相当于setter方法
     @property
     def headers(self):
         if hasattr(self, '_headers'):
@@ -305,6 +318,7 @@ class HttpError(Exception):
     __repr__ = __str__
 
 
+# 重定向错误
 class RedirectError(HttpError):
 
     '''
@@ -441,6 +455,8 @@ def seeother(location):
     return RedirectError(303, location)
 
 
+# 转码(encode：将unicode转化为utf-8)
+# 中文字符转换后1个Unicode字符将变为3个UTF-8字符
 def _to_str(s):
     '''
     Convert to str.
@@ -459,7 +475,8 @@ def _to_str(s):
     return str(s)
 
 
-# 转码(将unicode转化为utf-8)
+# 转码(decode：将utf-8转化为unicode)
+# 中文字符转换后1个Unicode字符将变为3个UTF-8字符
 def _to_unicode(s, encoding='utf-8'):
     '''
     Convert to unicode.
@@ -470,6 +487,9 @@ def _to_unicode(s, encoding='utf-8'):
     return s.decode('utf-8')
 
 
+# urllib.quote(string[, safe])，除了三个符号“_.-”外，将所有符号编码
+# 后面的参数safe是不编码的字符，如：
+# urllib.quote("http://neeao.com/index.php?id=1",":?=/")
 def _quote(s, encoding='utf-8'):
     '''
     Url quote as str.
@@ -479,11 +499,13 @@ def _quote(s, encoding='utf-8'):
     >>> _quote(u'hello world!')
     'hello%20world%21'
     '''
+    # 如果是unicode编码先转化为utf-8编码
     if isinstance(s, unicode):
         s = s.encode(encoding)
     return urllib.quote(s)
 
 
+# urllib.unquote：反转URL的编码格式
 def _unquote(s, encoding='utf-8'):
     '''
     Url unquote as unicode.
@@ -544,6 +566,11 @@ def post(path):
 _re_route = re.compile(r'(\:[a-zA-Z_]\w*)')
 
 
+# 请求Url正则处理
+#(?p<name>...)给分组匹配，定义一个别名,如下：
+# import re
+# m = re.match(r'(\w+) (?P<sign>.*)!', 'hello world!')
+# print m.group('sign')  --->world
 def _build_regex(path):
     r'''
     Convert route path to regex.
@@ -580,6 +607,7 @@ def _build_regex(path):
     return ''.join(re_list)
 
 
+# 请求url路由器
 class Route(object):
 
     '''
@@ -589,11 +617,13 @@ class Route(object):
     def __init__(self, func):
         self.path = func.__web_route__
         self.method = func.__web_method__
+        # 是否含有动态参数，否则为静态的
         self.is_static = _re_route.search(self.path) is None
         if not self.is_static:
             self.route = re.compile(_build_regex(self.path))
         self.func = func
 
+    # 用来匹配url
     def match(self, url):
         m = self.route.match(url)
         if m:
@@ -611,8 +641,10 @@ class Route(object):
     __repr__ = __str__
 
 
+# 输出静态文件
 def _static_file_generator(fpath):
     BLOCK_SIZE = 8192
+    # 已2进制读的方式打开文件，每次读取9192个字节
     with open(fpath, 'rb') as f:
         block = f.read(BLOCK_SIZE)
         while block:
@@ -620,6 +652,7 @@ def _static_file_generator(fpath):
             block = f.read(BLOCK_SIZE)
 
 
+# 静态文件路由器
 class StaticFileRoute(object):
 
     def __init__(self):
@@ -633,20 +666,24 @@ class StaticFileRoute(object):
         return None
 
     def __call__(self, *args):
+        # 获取文件的项目路径
         fpath = os.path.join(ctx.application.document_root, args[0])
         if not os.path.isfile(fpath):
             raise notfound()
         # os.path.splitext 获取文件的路径和文件后缀
         fext = os.path.splitext(fpath)[1]
+        # 设置文件下载的格式
         ctx.response.content_type = mimetypes.types_map.get(
             fext.lower(), 'application/octet-stream')
         return _static_file_generator(fpath)
 
 
+# 处理网站图标
 def favicon_handler():
     return static_file_handler('/favicon.ico')
 
 
+# 文件上传input增强
 class MultipartFile(object):
 
     '''
@@ -662,6 +699,7 @@ class MultipartFile(object):
         self.file = storage.file
 
 
+# 请求实体
 class Request(object):
 
     '''
@@ -671,7 +709,9 @@ class Request(object):
     def __init__(self, environ):
         self._environ = environ
 
+    # 使用cgi.FieldStorage() 获取所有的表单提交数据并转码
     def _parse_input(self):
+        # 转化参数为unicode编码
         def _convert(item):
             if isinstance(item, list):
                 return [_to_unicode(i.value) for i in item]
@@ -685,6 +725,7 @@ class Request(object):
             inputs[key] = _convert(fs[key])
         return inputs
 
+    # 设置raw_input
     def _get_raw_input(self):
         '''
         Get raw input as dict containing values as unicode, list or MultipartFile.
@@ -693,6 +734,7 @@ class Request(object):
             self._raw_input = self._parse_input()
         return self._raw_input
 
+    # 获取某个表单值
     def __getitem__(self, key):
         '''
         Get input parameter value. If the specified key has multiple value, the first one is returned.
@@ -764,6 +806,7 @@ class Request(object):
             return r[:]
         return [r]
 
+    # 增加默认表单值，并将参数值为list的只取第一个值
     def input(self, **kw):
         '''
         Get input as dict from request, fill dict using provided default value if key not exist.
@@ -939,6 +982,7 @@ class Request(object):
         '''
         return self._get_headers().get(header.upper(), default)
 
+    # 获取所有的cookies
     def _get_cookies(self):
         if not hasattr(self, '_cookies'):
             cookies = {}
@@ -964,6 +1008,7 @@ class Request(object):
         '''
         return Dict(**self._get_cookies())
 
+    # 获取某个cookie的值
     def cookie(self, name, default=None):
         '''
         Return specified cookie value as unicode. Default to None if cookie not exists.
@@ -988,6 +1033,7 @@ class Response(object):
         self._status = '200 OK'
         self._headers = {'CONTENT-TYPE': 'text/html; charset=utf-8'}
 
+    # 获取response的header包括cookies信息
     @property
     def headers(self):
         '''
@@ -1024,6 +1070,7 @@ class Response(object):
             key = name
         return self._headers.get(key)
 
+    # 删除不需要设置的header
     def unset_header(self, name):
         '''
         Unset header by name and value.
@@ -1040,6 +1087,7 @@ class Response(object):
         if key in self._headers:
             del self._headers[key]
 
+    # 设置header信息
     def set_header(self, name, value):
         '''
         Set header by name and value.
@@ -1070,6 +1118,7 @@ class Response(object):
         '''
         return self.header('CONTENT-TYPE')
 
+    # 用于重新设置response的content_type类型
     @content_type.setter
     def content_type(self, value):
         '''
@@ -1264,6 +1313,7 @@ class Response(object):
             raise TypeError('Bad type of response code.')
 
 
+# 定义模板类
 class Template(object):
 
     def __init__(self, template_name, **kw):
@@ -1283,6 +1333,7 @@ class Template(object):
         self.model = dict(**kw)
 
 
+# 定义模板引擎
 class TemplateEngine(object):
 
     '''
@@ -1293,6 +1344,7 @@ class TemplateEngine(object):
         return '<!-- override this method to render template -->'
 
 
+# Jinja2模板引擎
 class Jinja2TemplateEngine(TemplateEngine):
 
     '''
@@ -1304,20 +1356,26 @@ class Jinja2TemplateEngine(TemplateEngine):
     >>> engine('jinja2-test.html', dict(name='Michael', posted_at=datetime.datetime(2014, 6, 1, 10, 11, 12)))
     '<p>Hello, Michael.</p><span>2014-06-01 10:11:12</span>'
     '''
+    # 初始化，定位模板文件
 
     def __init__(self, templ_dir, **kw):
         from jinja2 import Environment, FileSystemLoader
         if not 'autoescape' in kw:
             kw['autoescape'] = True
+        # Environment Jinja2的核心类：用来保存配置、全局对象，
+        # 以及从本地文件系统或其它位置加载模板
         self._env = Environment(loader=FileSystemLoader(templ_dir), **kw)
 
+    # 添加过滤器
     def add_filter(self, name, fn_filter):
         self._env.filters[name] = fn_filter
 
+    # 加载某个模板
     def __call__(self, path, model):
         return self._env.get_template(path).render(**model).encode('utf-8')
 
 
+# 默认的错误处理
 def _default_error_handler(e, start_response, is_debug):
     if isinstance(e, HttpError):
         logging.info('HttpError: %s' % e.status)
@@ -1333,6 +1391,8 @@ def _default_error_handler(e, start_response, is_debug):
     return ('<html><body><h1>500 Internal Server Error</h1><h3>%s</h3></body></html>' % str(e))
 
 
+# view注解,根据func的返回值为模板的参数，view中的path为模板的路径
+# 然后返回Template(path, **r)
 def view(path):
     '''
     A view decorator that render a view by dict.
@@ -1369,6 +1429,7 @@ _RE_INTERCEPTROR_STARTS_WITH = re.compile(r'^([^\*\?]+)\*?$')
 _RE_INTERCEPTROR_ENDS_WITH = re.compile(r'^\*([^\*\?]+)$')
 
 
+# 用于拦截器的path匹配,pattern为被匹配的path
 def _build_pattern_fn(pattern):
     m = _RE_INTERCEPTROR_STARTS_WITH.match(pattern)
     if m:
@@ -1379,6 +1440,7 @@ def _build_pattern_fn(pattern):
     raise ValueError('Invalid pattern definition in interceptor.')
 
 
+# 拦截器的定义
 def interceptor(pattern='/'):
     '''
     An @interceptor decorator.
@@ -1393,6 +1455,7 @@ def interceptor(pattern='/'):
     return _decorator
 
 
+# 拦截器匹配，如果匹配成功，执行拦截器后返回next对象,否则直接返回next对象
 def _build_interceptor_fn(func, next):
     def _wrapper():
         if func.__interceptor__(ctx.request.path_info):
@@ -1402,6 +1465,7 @@ def _build_interceptor_fn(func, next):
     return _wrapper
 
 
+# 将拦截器链和路由方法结合起来
 def _build_interceptor_chain(last_fn, *interceptors):
     '''
     Build interceptor chain.
@@ -1488,6 +1552,7 @@ class WSGIApplication(object):
           document_root: document root path.
         '''
         self._running = False
+        # 应用路径
         self._document_root = document_root
 
         self._interceptors = []
@@ -1503,6 +1568,7 @@ class WSGIApplication(object):
         if self._running:
             raise RuntimeError('Cannot modify WSGIApplication when running.')
 
+    # 设置模板引擎
     @property
     def template_engine(self):
         return self._template_engine
@@ -1512,6 +1578,7 @@ class WSGIApplication(object):
         self._check_not_running()
         self._template_engine = engine
 
+    # 用于加载模块(urls.py)
     def add_module(self, mod):
         self._check_not_running()
         # types.ModuleType 模块类型,types.DictType字典类型等等
@@ -1521,9 +1588,13 @@ class WSGIApplication(object):
         # dir获取对象的所有属性和方法名
         for name in dir(m):
             fn = getattr(m, name)
+            # 加载urls.py中的所有get和post注解修饰的方法
             if callable(fn) and hasattr(fn, '__web_route__') and hasattr(fn, '__web_method__'):
                 self.add_url(fn)
 
+    # 加载get和post注解修饰的方法，并根据path参数
+    # 区分是动态的还是静态的url(是否含有":"),加入到相应的容器中
+    # 其中动态的path会转化为正则表达式
     def add_url(self, func):
         self._check_not_running()
         route = Route(func)
@@ -1539,11 +1610,13 @@ class WSGIApplication(object):
                 self._post_dynamic.append(route)
         logging.info('Add route: %s' % str(route))
 
+    # 添加拦截器
     def add_interceptor(self, func):
         self._check_not_running()
         self._interceptors.append(func)
         logging.info('Add interceptor: %s' % str(func))
 
+    # 启动应用
     def run(self, port=9000, host='127.0.0.1'):
         from wsgiref.simple_server import make_server
         logging.info('application (%s) will start at %s:%s...' %
@@ -1552,6 +1625,7 @@ class WSGIApplication(object):
         server.serve_forever()
 
     def get_wsgi_application(self, debug=False):
+        logging.info('application setsetset...')
         self._check_not_running()
         if debug:
             self._get_dynamic.append(StaticFileRoute())
@@ -1559,6 +1633,11 @@ class WSGIApplication(object):
 
         _application = Dict(document_root=self._document_root)
 
+        # 用来匹配path对应，查询对应的执行逻辑
+        # 1.获取档期线程threadlocal中的request.nethod和path
+        # 2.判断是否是get还是post,然后先在静态path池中查找,是否存在匹配的
+        # 3.如果不存在，再总动态的池中去一一匹配，找到之后调用
+        # 4.如果找不到notfound，异常就badrequest
         def fn_route():
             request_method = ctx.request.request_method
             path_info = ctx.request.path_info
@@ -1582,9 +1661,11 @@ class WSGIApplication(object):
                 raise notfound()
             raise badrequest()
 
+        # 拦截器和路由方法结合
         fn_exec = _build_interceptor_chain(fn_route, *self._interceptors)
 
         def wsgi(env, start_response):
+            # 应用的路径
             ctx.application = _application
             ctx.request = Request(env)
             response = ctx.response = Response()

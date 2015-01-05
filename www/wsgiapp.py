@@ -67,6 +67,3 @@ if __name__ == '__main__':
     wsgi.run(9000, host='0.0.0.0')
 else:
     application = wsgi.get_wsgi_application()
-
-#"theme": "Flatland Dark.sublime-theme",
-#"translate_tabs_to_spaces": true
