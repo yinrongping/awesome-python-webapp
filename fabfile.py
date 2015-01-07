@@ -53,7 +53,7 @@ def backup():
         run('rm -f %s.tar.gz' % f)
 
 
-# 打包
+# 打包应用，排除一些目录和文件
 def build():
     '''
     Build dist package.
@@ -68,6 +68,7 @@ def build():
         local(' '.join(cmd))
 
 
+# 发布应用
 def deploy():
     newdir = 'www-%s' % _now()
     run('rm -f %s' % _REMOTE_TMP_TAR)
@@ -89,6 +90,7 @@ def deploy():
 RE_FILES = re.compile('\r?\n')
 
 
+# 回滚应用
 def rollback():
     '''
     rollback to previous version
@@ -138,6 +140,7 @@ def rollback():
         print('ROLLBACKED OK.')
 
 
+# 数据库回滚
 def restore2local():
     '''
     Restore db to local

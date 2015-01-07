@@ -1,15 +1,21 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
+# 用于监听代码修改，自动重启应用
+# easy_install watchdog
 __author__ = 'Michael Liao'
 
-import os, sys, time, subprocess
+import os
+import sys
+import time
+import subprocess
 
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
+
 def log(s):
     print '[Monitor] %s' % s
+
 
 class MyFileSystemEventHander(FileSystemEventHandler):
 
@@ -25,6 +31,7 @@ class MyFileSystemEventHander(FileSystemEventHandler):
 command = ['echo', 'ok']
 process = None
 
+
 def kill_process():
     global process
     if process:
@@ -34,18 +41,23 @@ def kill_process():
         log('Process ended with code %s.' % process.returncode)
         process = None
 
+
 def start_process():
     global process, command
     log('Start process %s...' % ' '.join(command))
-    process = subprocess.Popen(command, stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr)
+    process = subprocess.Popen(
+        command, stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr)
+
 
 def restart_process():
     kill_process()
     start_process()
 
+
 def start_watch(path, callback):
     observer = Observer()
-    observer.schedule(MyFileSystemEventHander(restart_process), path, recursive=True)
+    observer.schedule(
+        MyFileSystemEventHander(restart_process), path, recursive=True)
     observer.start()
     log('Watching directory %s...' % path)
     start_process()
@@ -57,11 +69,12 @@ def start_watch(path, callback):
     observer.join()
 
 if __name__ == '__main__':
-    argv = sys.argv[1:]
+    #argv = sys.argv[1:]
+    argv = ['wsgiapp.py']
     if not argv:
         print('Usage: ./pymonitor your-script.py')
         exit(0)
-    if argv[0]!='python':
+    if argv[0] != 'python':
         argv.insert(0, 'python')
     command = argv
     path = os.path.abspath('.')
