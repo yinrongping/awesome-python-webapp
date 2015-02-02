@@ -24,6 +24,7 @@ class MyFileSystemEventHander(FileSystemEventHandler):
         self.restart = fn
 
     def on_any_event(self, event):
+        print('-----------------', event.src_path, '----------------')
         if event.src_path.endswith('.py'):
             log('Python source file changed: %s' % event.src_path)
             self.restart()
@@ -69,7 +70,7 @@ def start_watch(path, callback):
     observer.join()
 
 if __name__ == '__main__':
-    #argv = sys.argv[1:]
+    # argv = sys.argv[1:]
     argv = ['wsgiapp.py']
     if not argv:
         print('Usage: ./pymonitor your-script.py')
