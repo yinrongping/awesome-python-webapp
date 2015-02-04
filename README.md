@@ -1,4 +1,16 @@
 awesome-python-webapp
 =====================
 
-A python webapp tutorial.
+##此项目是[廖雪峰](http://www.liaoxuefeng.com/)老师的作品 
+
+###本人在廖老师项目的基础上，增加了一些注解(项目原来的注解就已经十分充足，规范)
+由于本人还是python菜鸟 很多知识点还不能很好的掌握，所有注解中加入了知识点的衍生
+
+作为一个python初学者，很荣幸能够看到廖老师的python入门教程，这个教程至少让我这个python门外汉，在一个月的时间内
+能有了一个基本的入门(抽时间学的)，最后这个项目可以说是廖老师对之前所有基础知识的总结
+
+> * ORM框架的实现
+> * WEB框架的实现
+> * MVC的实现
+> * 项目部署gunicorn，nginx的使用
+> * Fabric的自动化部署,Supervisor的进程管理
