@@ -7,7 +7,6 @@ __author__ = 'Michael Liao'
 JSON API definition.
 '''
 
-import re
 import json
 import logging
 import functools
@@ -15,6 +14,7 @@ import functools
 from transwarp.web import ctx
 
 
+# 分页组件
 class Page(object):
 
     '''
@@ -51,7 +51,8 @@ class Page(object):
         self.page_size = page_size
         self.page_count = item_count // page_size + \
             (1 if item_count % page_size > 0 else 0)
-        if (item_count == 0) or (page_index < 1) or (page_index > self.page_count):
+        if (item_count == 0) or (page_index < 1) or \
+                (page_index > self.page_count):
             self.offset = 0
             self.limit = 0
             self.page_index = 1
@@ -63,9 +64,14 @@ class Page(object):
         self.has_previous = self.page_index > 1
 
     def __str__(self):
-        return 'item_count: %s, page_count: %s, page_index: %s, page_size: %s, offset: %s, limit: %s' % (self.item_count, self.page_count, self.page_index, self.page_size, self.offset, self.limit)
+        return 'item_count: %s, page_count: %s, page_index: %s, page_size: %s,\
+        offset: %s, limit: %s' % (self.item_count, self.page_count,
+                                  self.page_index, self.page_size, self.offset,
+                                  self.limit)
 
     __repr__ = __str__
+
+# json格式化方法
 
 
 def _dump(obj):
@@ -80,14 +86,17 @@ def _dump(obj):
     raise TypeError('%s is not JSON serializable' % obj)
 
 
+# 将page转化为json格式
 def dumps(obj):
     return json.dumps(obj, default=_dump)
 
 
+# api异常类
 class APIError(StandardError):
 
     '''
-    the base APIError which contains error(required), data(optional) and message(optional).
+    the base APIError which contains error(required),
+    data(optional) and message(optional).
     '''
 
     def __init__(self, error, data='', message=''):
@@ -96,15 +105,20 @@ class APIError(StandardError):
         self.data = data
         self.message = message
 
+# 输入值有误
+
 
 class APIValueError(APIError):
 
     '''
-    Indicate the input value has error or invalid. The data specifies the error field of input form.
+    Indicate the input value has error or invalid. The data specifies the error
+     field of input form.
     '''
 
     def __init__(self, field, message=''):
         super(APIValueError, self).__init__('value:invalid', field, message)
+
+# 资源文件找不到
 
 
 class APIResourceNotFoundError(APIError):
@@ -116,6 +130,8 @@ class APIResourceNotFoundError(APIError):
     def __init__(self, field, message=''):
         super(APIResourceNotFoundError, self).__init__(
             'value:notfound', field, message)
+
+# 没有权限
 
 
 class APIPermissionError(APIError):
@@ -129,9 +145,11 @@ class APIPermissionError(APIError):
             'permission:forbidden', 'permission', message)
 
 
+# api类型注解，表示返回的是json格式
 def api(func):
     '''
-    A decorator that makes a function to json api, makes the return value as json.
+    A decorator that makes a function to json api,
+    makes the return value as json.
 
     @app.route('/api/test')
     @api
@@ -147,7 +165,8 @@ def api(func):
         except Exception, e:
             logging.exception(e)
             r = json.dumps(
-                dict(error='internalerror', data=e.__class__.__name__, message=e.message))
+                dict(error='internalerror',
+                     data=e.__class__.__name__, message=e.message))
         ctx.response.content_type = 'application/json'
         return r
     return _wrapper
