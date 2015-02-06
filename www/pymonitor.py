@@ -23,8 +23,9 @@ class MyFileSystemEventHander(FileSystemEventHandler):
         super(MyFileSystemEventHander, self).__init__()
         self.restart = fn
 
+    # 设置监听
     def on_any_event(self, event):
-        print('-----------------', event.src_path, '----------------')
+        # 监听任何的修改,如果是py文件的话，就重启应用
         if event.src_path.endswith('.py'):
             log('Python source file changed: %s' % event.src_path)
             self.restart()
@@ -33,6 +34,7 @@ command = ['echo', 'ok']
 process = None
 
 
+# 杀掉进程
 def kill_process():
     global process
     if process:
@@ -43,6 +45,7 @@ def kill_process():
         process = None
 
 
+# 启动项目
 def start_process():
     global process, command
     log('Start process %s...' % ' '.join(command))
@@ -50,11 +53,13 @@ def start_process():
         command, stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr)
 
 
+# 重启项目
 def restart_process():
     kill_process()
     start_process()
 
 
+# 开启监听模式
 def start_watch(path, callback):
     observer = Observer()
     observer.schedule(
